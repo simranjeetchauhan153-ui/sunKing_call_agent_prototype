@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#fad826">
+  <title>Sun King | Calling Agent</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --yellow: #fad826;
+      --yellow-dark: #e8bd00;
+      --ink: #171811;
+      --muted: #77786e;
+      --line: #e9e9e2;
+      --paper: #fff;
+      --canvas: #f6f6f1;
+      --green: #16794b;
+      --green-bg: #e8f5ed;
+      --red: #bd392d;
+      --red-bg: #fff0ed;
+      --amber: #9b6500;
+      --amber-bg: #fff5d7;
+      --shadow: 0 12px 32px rgba(26, 27, 18, .055);
+    }
+
+    * { box-sizing: border-box; }
+    svg { stroke-linecap: round; stroke-linejoin: round; }
+
+    body {
+      margin: 0;
+      background: var(--canvas);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 14px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+
+    .topbar {
+      height: 72px;
+      padding: 0 36px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--yellow);
+      border-bottom: 1px solid rgba(23, 24, 17, .08);
+    }
+
+    .brand {
+      width: 202px;
+      height: 62px;
+      object-fit: contain;
+      object-position: left center;
+      mix-blend-mode: multiply;
+    }
+
+    .topbar-right { display: flex; align-items: center; gap: 22px; }
+    .live-indicator { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; }
+    .live-dot { width: 8px; height: 8px; border-radius: 50%; background: #19824e; box-shadow: 0 0 0 3px rgba(25,130,78,.13); }
+    .agent-chip { display: flex; align-items: center; gap: 10px; padding-left: 20px; border-left: 1px solid rgba(23,24,17,.16); }
+    .avatar { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--ink); color: var(--yellow); font-weight: 800; font-size: 12px; }
+    .agent-name { font-size: 12px; font-weight: 750; }
+    .agent-role { color: rgba(23,24,17,.64); font-size: 11px; margin-top: 2px; }
+
+    main { max-width: 1480px; margin: 0 auto; padding: 34px 36px 56px; }
+    .heading-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 26px; }
+    .eyebrow { margin: 0 0 9px; color: #73746a; font-size: 10px; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
+    h1 { margin: 0; font-size: clamp(26px, 3vw, 34px); letter-spacing: -.045em; line-height: 1.1; }
+    .subtitle { margin: 9px 0 0; color: var(--muted); font-size: 13px; }
+    .date-chip { display: flex; align-items: center; gap: 9px; padding: 10px 13px; border: 1px solid var(--line); border-radius: 9px; background: var(--paper); color: #52534b; font-size: 12px; font-weight: 650; white-space: nowrap; }
+    .date-chip svg { width: 15px; height: 15px; }
+
+    .rule-card { display: grid; grid-template-columns: 190px 1fr; gap: 20px; align-items: center; padding: 18px 20px; margin-bottom: 22px; border: 1px solid #eedb79; border-radius: 12px; background: #fffbed; }
+    .rule-title { font-size: 12px; font-weight: 800; }
+    .rule-title span { display: block; margin-top: 4px; color: #88826a; font-size: 10px; font-weight: 550; }
+    .rule-list { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .rule { min-height: 52px; padding: 9px 11px; border-radius: 8px; background: rgba(255,255,255,.8); }
+    .rule strong { display: block; margin-bottom: 4px; font-size: 10px; letter-spacing: .01em; }
+    .rule small { display: flex; align-items: center; gap: 5px; color: #6e6f65; font-size: 10px; }
+    .rule small b { color: var(--ink); font-weight: 700; }
+    .rule .urgent { color: var(--red); font-weight: 750; }
+    .rule .skip { color: #77786e; }
+
+    .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 23px; }
+    .metric { padding: 18px 19px; border: 1px solid var(--line); border-radius: 11px; background: var(--paper); box-shadow: 0 2px 7px rgba(20,20,15,.018); }
+    .metric-top { display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: 11px; font-weight: 650; }
+    .metric-icon { display: grid; place-items: center; width: 29px; height: 29px; border-radius: 8px; background: #f5f4ee; color: #424239; }
+    .metric-icon svg { width: 15px; height: 15px; }
+    .metric-value { margin-top: 13px; font-size: 27px; font-weight: 780; letter-spacing: -.05em; }
+    .metric-foot { margin-top: 4px; color: #8a8b81; font-size: 10px; }
+    .metric.urgent-card { border-color: #f0d0c8; }
+    .metric.urgent-card .metric-icon { background: var(--red-bg); color: var(--red); }
+    .metric.urgent-card .metric-value { color: var(--red); }
+    .metric.clear-card .metric-icon { background: var(--green-bg); color: var(--green); }
+    .metric.review-card .metric-icon { background: var(--amber-bg); color: var(--amber); }
+
+    .table-card { overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); box-shadow: var(--shadow); }
+    .table-header { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 19px 21px; border-bottom: 1px solid var(--line); }
+    .table-title { margin: 0; font-size: 15px; font-weight: 780; letter-spacing: -.02em; }
+    .table-count { margin-left: 8px; padding: 3px 8px; border-radius: 20px; background: #f1f1eb; color: #66675e; font-size: 10px; font-weight: 700; vertical-align: 1px; }
+    .table-tools { display: flex; align-items: center; gap: 9px; }
+    .search-wrap { position: relative; }
+    .search-wrap svg { position: absolute; top: 10px; left: 11px; width: 15px; height: 15px; color: #83847a; pointer-events: none; }
+    .search { width: 222px; height: 36px; padding: 0 12px 0 34px; outline: none; border: 1px solid var(--line); border-radius: 7px; color: var(--ink); font-size: 11px; }
+    .search:focus, .filter:focus { border-color: #c7a900; box-shadow: 0 0 0 3px rgba(250,216,38,.17); }
+    .filter { height: 36px; padding: 0 29px 0 11px; border: 1px solid var(--line); border-radius: 7px; background: white; color: #4e4f47; outline: none; font-size: 11px; }
+    .table-scroll { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; white-space: nowrap; }
+    th { padding: 11px 13px; background: #fafaf7; color: #85867c; text-align: left; font-size: 9px; font-weight: 750; letter-spacing: .075em; text-transform: uppercase; }
+    th:first-child, td:first-child { padding-left: 21px; }
+    td { padding: 14px 13px; border-top: 1px solid #f0f0eb; color: #4d4e46; font-size: 11px; }
+    tbody tr:hover { background: #fffef8; }
+    .customer { display: flex; align-items: center; gap: 9px; color: var(--ink); font-size: 11px; font-weight: 720; }
+    .customer-avatar { display: grid; place-items: center; width: 29px; height: 29px; flex: 0 0 29px; border-radius: 50%; background: #f5edc7; color: #645300; font-size: 9px; font-weight: 800; }
+    .id-number, .phone-number { color: #66675f; font-variant-numeric: tabular-nums; }
+    .intent { display: inline-flex; align-items: center; gap: 5px; font-weight: 750; }
+    .intent.positive { color: var(--green); }
+    .intent.negative { color: #74756d; }
+    .intent-mark { display: grid; place-items: center; width: 17px; height: 17px; border-radius: 50%; background: currentColor; color: white; font-size: 10px; line-height: 1; }
+    .intent-mark span { color: white; }
+    .score { display: block; margin-top: 3px; color: #909087; font-size: 9px; font-weight: 500; }
+    .status { display: inline-flex; align-items: center; gap: 6px; padding: 5px 8px; border-radius: 20px; font-size: 10px; font-weight: 750; }
+    .status::before { width: 6px; height: 6px; border-radius: 50%; background: currentColor; content: ""; }
+    .status.clear { color: var(--green); background: var(--green-bg); }
+    .status.block { color: var(--red); background: var(--red-bg); }
+    .status.error { color: var(--amber); background: var(--amber-bg); }
+    .decision { display: block; margin-top: 5px; color: #898a80; font-size: 9px; }
+    .decision.urgent { color: var(--red); font-weight: 700; }
+    .call-button { display: inline-flex; min-width: 77px; align-items: center; justify-content: center; gap: 6px; height: 31px; border: 0; border-radius: 7px; background: var(--yellow); color: var(--ink); font-size: 10px; font-weight: 800; transition: background .16s, transform .16s; }
+    .call-button:hover { background: #f2c900; transform: translateY(-1px); }
+    .call-button svg { width: 13px; height: 13px; }
+    .call-button.muted { border: 1px solid var(--line); background: #f7f7f3; color: #77786e; }
+    .call-button.muted:hover { background: #eeeee8; }
+    .call-button:disabled { cursor: default; transform: none; opacity: .8; }
+    .empty-state { display: none; padding: 38px 20px; color: var(--muted); text-align: center; font-size: 12px; }
+    .table-footer { display: flex; align-items: center; justify-content: space-between; padding: 13px 21px; border-top: 1px solid var(--line); color: #818278; font-size: 10px; }
+    .table-footer strong { color: #46473f; }
+
+    .overlay { position: fixed; z-index: 5; inset: 0; display: none; align-items: center; justify-content: center; padding: 20px; background: rgba(19,20,15,.45); backdrop-filter: blur(3px); }
+    .overlay.open { display: flex; }
+    .call-dialog { width: min(100%, 390px); padding: 28px; border-radius: 16px; background: white; box-shadow: 0 25px 70px rgba(0,0,0,.22); text-align: center; animation: pop .18s ease-out; }
+    @keyframes pop { from { opacity: 0; transform: translateY(8px) scale(.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    .call-avatar { display: grid; place-items: center; width: 62px; height: 62px; margin: 0 auto 14px; border-radius: 50%; background: var(--yellow); color: var(--ink); font-size: 17px; font-weight: 800; }
+    .call-dialog h2 { margin: 0; font-size: 21px; letter-spacing: -.035em; }
+    .call-dialog p { margin: 7px 0 0; color: var(--muted); font-size: 12px; }
+    .call-phone { margin-top: 14px; color: var(--ink) !important; font-size: 15px !important; font-weight: 700; letter-spacing: .02em; }
+    .call-status { display: inline-flex; align-items: center; gap: 7px; margin-top: 20px; padding: 8px 12px; border-radius: 20px; background: #f3f3ee; color: #55564e; font-size: 10px; font-weight: 700; }
+    .call-status .live-dot { width: 7px; height: 7px; }
+    .call-actions { display: flex; justify-content: center; gap: 9px; margin-top: 25px; }
+    .end-call, .close-dialog { min-width: 112px; height: 39px; border: 0; border-radius: 8px; font-size: 11px; font-weight: 800; }
+    .end-call { background: #d94136; color: white; }
+    .close-dialog { background: #f1f1ec; color: #4d4e46; }
+    .toast { position: fixed; z-index: 8; right: 25px; bottom: 24px; padding: 12px 16px; border-radius: 9px; background: var(--ink); color: white; box-shadow: var(--shadow); font-size: 11px; font-weight: 650; opacity: 0; transform: translateY(8px); pointer-events: none; transition: .2s; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+
+    @media (max-width: 900px) {
+      main { padding: 28px 22px 42px; }
+      .topbar { padding: 0 22px; }
+      .rule-card { grid-template-columns: 1fr; gap: 12px; }
+      .rule-list { grid-template-columns: repeat(2, 1fr); }
+      .metrics { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 600px) {
+      .topbar { height: 62px; padding: 0 16px; }
+      .brand { width: 158px; height: 55px; }
+      .topbar-right { gap: 12px; }
+      .agent-chip { padding-left: 12px; }
+      .agent-name, .agent-role { display: none; }
+      main { padding: 24px 14px 34px; }
+      .heading-row { align-items: flex-start; margin-bottom: 19px; }
+      .date-chip { padding: 8px; font-size: 0; }
+      .date-chip svg { width: 17px; height: 17px; }
+      .rule-card { padding: 15px; }
+      .rule-list { gap: 7px; }
+      .rule { padding: 8px; }
+      .metrics { gap: 9px; margin-bottom: 16px; }
+      .metric { padding: 13px; }
+      .metric-value { font-size: 24px; }
+      .table-header { align-items: flex-start; flex-direction: column; padding: 16px; }
+      .table-tools { width: 100%; }
+      .search-wrap { flex: 1; }
+      .search { width: 100%; }
+      .filter { max-width: 130px; }
+      th:first-child, td:first-child { padding-left: 15px; }
+      .table-footer { padding: 12px 15px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+    }
+
+    /* Application shell */
+    body { background: #f5f6f8; color: #20231f; }
+    .app-shell { min-width: 0; min-height: 100vh; margin-left: 238px; }
+    body.sidebar-hidden .sidebar { display: none; }
+    body.sidebar-hidden .app-shell { margin-left: 0; }
+    .sidebar {
+      position: fixed; z-index: 3; inset: 0 auto 0 0; display: flex; width: 238px;
+      flex-direction: column; padding: 18px 13px 14px; border-right: 1px solid #e9e9e5;
+      background: #fff;
+    }
+    .sidebar-brand {
+      display: flex; width: calc(100% + 26px); height: 64px; flex: 0 0 64px; align-items: center;
+      margin: -18px -13px 22px; padding: 0 18px; overflow: hidden; background: var(--yellow);
+    }
+    .sidebar-brand img { display: block; width: 100%; max-width: 202px; height: auto; object-fit: contain; object-position: left center; }
+    .nav-label { margin: 0 10px 9px; color: #96978f; font-size: 9px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+    .side-nav { display: grid; gap: 4px; }
+    .nav-link {
+      display: flex; min-height: 40px; align-items: center; gap: 11px; padding: 0 11px;
+      border: 0; border-radius: 7px; background: transparent; color: #66685f; text-align: left;
+      font-size: 11px; font-weight: 620; text-decoration: none; transition: .15s;
+    }
+    .nav-link svg { width: 17px; height: 17px; flex: 0 0 17px; stroke-width: 1.7; }
+    .nav-link:hover { background: #f7f7f3; color: #20231f; }
+    .nav-link.active { background: #fff5c4; color: #28240e; font-weight: 760; }
+    .nav-link.active svg { color: #705e00; }
+    .nav-badge { display: grid; min-width: 20px; height: 20px; place-items: center; margin-left: auto; padding: 0 5px; border-radius: 6px; background: #fff; color: #74630a; font-size: 9px; font-weight: 800; }
+    .sidebar-spacer { flex: 1; }
+    .help-card { margin: 12px 3px 15px; padding: 13px; border: 1px solid #eee8ce; border-radius: 9px; background: #fffdf4; }
+    .help-heading { display: flex; align-items: center; gap: 7px; color: #343327; font-size: 10px; font-weight: 750; }
+    .help-heading svg { width: 15px; height: 15px; color: #927c00; }
+    .help-copy { margin: 7px 0 9px; color: #77766a; font-size: 9px; line-height: 1.55; }
+    .help-link { padding: 0; border: 0; background: none; color: #635400; font-size: 9px; font-weight: 750; }
+    .sidebar-account { display: flex; align-items: center; gap: 9px; padding: 11px 7px 2px; border-top: 1px solid #eee; }
+    .avatar { width: 33px; height: 33px; flex: 0 0 33px; background: var(--yellow); color: #26230f; }
+    .account-copy { min-width: 0; flex: 1; }
+    .agent-name { overflow: hidden; color: #2d2e29; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+    .agent-role { color: #898a82; font-size: 9px; }
+    .account-menu-wrap { position: relative; }
+    .account-trigger { display: grid; width: 28px; height: 28px; place-items: center; border: 0; border-radius: 6px; background: transparent; color: #77786f; }
+    .account-trigger:hover, .utility-button:hover { background: #f2f2ed; }
+    .account-trigger svg { width: 16px; height: 16px; }
+    .account-menu { position: absolute; z-index: 5; right: 0; bottom: 37px; display: none; width: 178px; padding: 5px; border: 1px solid #e9e9e3; border-radius: 9px; background: #fff; box-shadow: 0 12px 28px rgba(25,26,20,.12); }
+    .account-menu.open { display: block; }
+    .account-menu button { display: flex; width: 100%; align-items: center; gap: 9px; padding: 9px; border: 0; border-radius: 6px; background: transparent; color: #42433d; text-align: left; font-size: 10px; }
+    .account-menu button:hover { background: #f6f6f2; }
+    .account-menu svg { width: 14px; height: 14px; color: #77786e; }
+    .topbar {
+      position: sticky; z-index: 2; top: 0; height: 64px; padding: 0 32px;
+      border-bottom: 1px solid #e9e9e5; background: rgba(255,255,255,.96); backdrop-filter: blur(12px);
+    }
+    .topbar-context { color: #74766d; font-size: 10px; }
+    .topbar-context strong { color: #292a24; font-weight: 700; }
+    .topbar-left { display: flex; align-items: center; gap: 12px; }
+    .nav-toggle { display: grid; width: 33px; height: 33px; place-items: center; border: 1px solid #e9e9e5; border-radius: 7px; background: #fff; color: #5c5e56; }
+    .nav-toggle:hover { background: #f6f6f2; color: #20231f; }
+    .nav-toggle svg { width: 17px; height: 17px; }
+    .topbar-right { gap: 14px; }
+    .live-indicator { gap: 7px; color: #5c615b; font-size: 10px; font-weight: 650; }
+    .live-dot { width: 7px; height: 7px; box-shadow: 0 0 0 3px rgba(25,130,78,.1); }
+    .agent-chip { display: none; }
+    .utility-button { position: relative; display: grid; width: 33px; height: 33px; place-items: center; border: 0; border-radius: 7px; background: transparent; color: #65675f; }
+    .utility-button svg { width: 17px; height: 17px; }
+    .notification-dot { position: absolute; top: 6px; right: 7px; width: 6px; height: 6px; border: 1px solid #fff; border-radius: 50%; background: #d84c3c; }
+    main { max-width: 1480px; padding: 30px 32px 48px; }
+    .eyebrow { margin-bottom: 7px; color: #81837a; font-size: 9px; letter-spacing: .1em; }
+    h1 { font-size: 29px; letter-spacing: -.04em; }
+    .subtitle { margin-top: 7px; color: #777971; font-size: 12px; }
+    .date-chip { border-color: #e8e9e3; border-radius: 7px; color: #575950; font-size: 10px; }
+    .rule-card { grid-template-columns: 170px 1fr; gap: 15px; padding: 14px 17px; margin-bottom: 18px; border-color: #efe4ad; border-radius: 9px; background: #fffdf6; }
+    .rule-title { font-size: 11px; }
+    .rule-title span { font-size: 9px; }
+    .rule-list { gap: 7px; }
+    .rule { min-height: 48px; padding: 8px 9px; border: 1px solid #f0efe8; border-radius: 7px; }
+    .rule strong { font-size: 9px; }
+    .rule small { font-size: 9px; }
+    .metrics { gap: 12px; margin-bottom: 19px; }
+    .metric { padding: 15px 16px; border-radius: 9px; box-shadow: none; }
+    .metric-top { font-size: 10px; }
+    .metric-icon { width: 27px; height: 27px; border-radius: 7px; }
+    .metric-value { margin-top: 10px; font-size: 25px; }
+    .metric-foot { font-size: 9px; }
+    .table-card { border-color: #e8e9e3; border-radius: 9px; box-shadow: 0 2px 8px rgba(20,20,15,.025); }
+    .table-header { padding: 16px 18px; }
+    .table-title { font-size: 13px; }
+    th { padding-top: 10px; padding-bottom: 10px; font-size: 8px; }
+    td { padding-top: 12px; padding-bottom: 12px; font-size: 10px; }
+    .customer { font-size: 10px; }
+    .call-button { min-width: 72px; height: 29px; border-radius: 6px; font-size: 9px; }
+    .overlay { z-index: 6; }
+    .toast { font-size: 10px; }
+    @media (max-width: 900px) {
+      .app-shell { margin-left: 205px; }
+      .sidebar { width: 205px; }
+      .topbar { padding: 0 21px; }
+      main { padding: 26px 21px 40px; }
+      .rule-card { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 650px) {
+      .app-shell { margin-left: 0; padding-bottom: 61px; }
+      body.sidebar-hidden .app-shell { padding-bottom: 0; }
+      .sidebar { inset: auto 0 0; width: 100%; height: 61px; flex-direction: row; align-items: center; padding: 5px 6px; border-top: 1px solid #e7e8e2; border-right: 0; }
+      .sidebar-brand, .nav-label, .sidebar-spacer, .help-card, .sidebar-account { display: none; }
+      .side-nav { display: contents; }
+      .nav-link { min-width: 0; min-height: 48px; flex: 1; flex-direction: column; justify-content: center; gap: 3px; padding: 4px 2px; border-radius: 6px; font-size: 8px; }
+      .nav-link svg { width: 17px; height: 17px; }
+      .nav-badge { position: absolute; transform: translate(12px,-9px); min-width: 15px; height: 15px; padding: 0 3px; font-size: 8px; }
+      .topbar { height: 56px; padding: 0 14px; }
+      .topbar-context { display: none; }
+      .topbar-right { gap: 7px; }
+      .live-indicator { font-size: 9px; }
+      main { padding: 21px 13px 28px; }
+      .heading-row { margin-bottom: 16px; }
+      h1 { font-size: 25px; }
+      .subtitle { max-width: 260px; font-size: 11px; line-height: 1.45; }
+      .date-chip { padding: 8px; font-size: 0; }
+      .rule-card { padding: 12px; }
+      .rule-list { grid-template-columns: repeat(2,minmax(0,1fr)); }
+      .metrics { gap: 8px; margin-bottom: 13px; }
+      .metric { padding: 12px; }
+      .metric-top { font-size: 9px; }
+      .metric-value { font-size: 22px; }
+      .metric-foot { font-size: 8px; }
+      .table-header { padding: 13px; }
+      .table-tools { gap: 6px; }
+      .search { height: 34px; }
+      .filter { height: 34px; max-width: 126px; font-size: 9px; }
+      th:first-child, td:first-child { padding-left: 13px; }
+    }
+  </style>
+</head>
+<body>
+  <svg aria-hidden="true" width="0" height="0" style="position:absolute;overflow:hidden">
+    <symbol id="icon-sidebar" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/></symbol>
+    <symbol id="icon-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></symbol>
+    <symbol id="icon-phone" viewBox="0 0 24 24"><path d="M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384"/></symbol>
+    <symbol id="icon-users" viewBox="0 0 24 24"><path d="M18 21a8 8 0 0 0-16 0"/><circle cx="10" cy="8" r="5"/><path d="M22 20c0-3.37-2-6.5-4-8a5 5 0 0 0-.45-8.3"/></symbol>
+    <symbol id="icon-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6h4"/></symbol>
+    <symbol id="icon-chart" viewBox="0 0 24 24"><path d="M5 21v-6M12 21V9M19 21V3"/></symbol>
+    <symbol id="icon-settings" viewBox="0 0 24 24"><path d="M14 17H5M19 7h-9"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></symbol>
+    <symbol id="icon-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"/></symbol>
+    <symbol id="icon-bell" viewBox="0 0 24 24"><path d="M10.268 21a2 2 0 0 0 3.464 0M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></symbol>
+    <symbol id="icon-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="icon-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></symbol>
+    <symbol id="icon-logout" viewBox="0 0 24 24"><path d="M10 21H2M10 3H7a2 2 0 0 0-2 2v16M14 12h.01M19 21V5a2 2 0 0 0-1.675-1.974l-6.163-1.013A1 1 0 0 0 10 3v18a1 1 0 0 0 1.124.992zM22 21h-3"/></symbol>
+    <symbol id="icon-phone-call" viewBox="0 0 24 24"><path d="M13 2a9 9 0 0 1 9 9M13 6a5 5 0 0 1 5 5M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384"/></symbol>
+    <symbol id="icon-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></symbol>
+    <symbol id="icon-search" viewBox="0 0 24 24"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></symbol>
+  </svg>
+  <aside class="sidebar" id="main-navigation" aria-label="Main navigation">
+    <a class="sidebar-brand" href="#overview" aria-label="Sun King home"><img src="Screenshot 2026-10-09 225650.png" alt="Sun King"></a>
+    <p class="nav-label">Workspace</p>
+    <nav class="side-nav">
+      <a class="nav-link" href="#overview" data-section="Overview"><svg fill="none" stroke="currentColor"><use href="#icon-grid"/></svg>Overview</a>
+      <a class="nav-link active" href="#queue" data-section="Calling queue" aria-current="page"><svg fill="none" stroke="currentColor"><use href="#icon-phone"/></svg>Calling queue<span class="nav-badge">8</span></a>
+      <a class="nav-link" href="#customers" data-section="Customers"><svg fill="none" stroke="currentColor"><use href="#icon-users"/></svg>Customers</a>
+      <a class="nav-link" href="#history" data-section="Call history"><svg fill="none" stroke="currentColor"><use href="#icon-clock"/></svg>Call history</a>
+      <a class="nav-link" href="#reports" data-section="Reports"><svg fill="none" stroke="currentColor"><use href="#icon-chart"/></svg>Reports</a>
+    </nav>
+    <div class="sidebar-spacer"></div>
+    <p class="nav-label">Support</p>
+    <nav class="side-nav">
+      <a class="nav-link" href="#settings" data-section="Settings"><svg fill="none" stroke="currentColor"><use href="#icon-settings"/></svg>Settings</a>
+    </nav>
+    <div class="help-card">
+      <div class="help-heading"><svg fill="none" stroke="currentColor"><use href="#icon-help"/></svg>Need a hand?</div>
+      <p class="help-copy">Find guidance for verification and customer calling.</p>
+      <button class="help-link" id="help-button">View agent guide →</button>
+    </div>
+    <div class="sidebar-account">
+      <div class="avatar">AK</div>
+      <div class="account-copy"><div class="agent-name">Aarav Kumar</div><div class="agent-role">Calling agent</div></div>
+      <div class="account-menu-wrap">
+        <button class="account-trigger" id="account-trigger" aria-label="Open account menu" aria-expanded="false"><svg fill="none" stroke="currentColor"><use href="#icon-chevron"/></svg></button>
+        <div class="account-menu" id="account-menu">
+          <button data-account-action="My profile"><svg fill="none" stroke="currentColor"><use href="#icon-user"/></svg>My profile</button>
+          <button data-account-action="Account settings"><svg fill="none" stroke="currentColor"><use href="#icon-settings"/></svg>Account settings</button>
+          <button data-account-action="Sign out"><svg fill="none" stroke="currentColor"><use href="#icon-logout"/></svg>Sign out</button>
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="app-shell">
+  <header class="topbar">
+    <div class="topbar-left">
+      <button class="nav-toggle" id="nav-toggle" aria-label="Hide navigation" aria-controls="main-navigation" aria-expanded="true" title="Hide navigation"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#icon-sidebar"/></svg></button>
+      <div class="topbar-context">Sun King <span aria-hidden="true">/</span> <strong>Calling operations</strong></div>
+    </div>
+    <div class="topbar-right">
+      <div class="live-indicator"><span class="live-dot"></span> Agent online</div>
+      <button class="utility-button" id="notifications-button" aria-label="Notifications"><svg fill="none" stroke="currentColor" stroke-width="1.7"><use href="#icon-bell"/></svg><span class="notification-dot"></span></button>
+    </div>
+  </header>
+
+  <main>
+    <section class="rule-card" aria-label="Call decision guide">
+      <div class="rule-title">Call decision guide<span>Intent + verification = next step</span></div>
+      <div class="rule-list">
+        <div class="rule"><strong>Positive + Clear</strong><small><b>Do not call</b> · already verified</small></div>
+        <div class="rule"><strong>Positive + Block</strong><small class="urgent">Urgent call · prioritize</small></div>
+        <div class="rule"><strong>Negative + Clear</strong><small><b>May call</b> · optional follow-up</small></div>
+        <div class="rule"><strong>Negative + Block</strong><small class="skip"><b>Skip call</b> · do not contact</small></div>
+      </div>
+    </section>
+
+    <section class="metrics" aria-label="Queue summary">
+      <article class="metric">
+        <div class="metric-top">Total customers<span class="metric-icon"><svg fill="none" stroke="currentColor" stroke-width="2"><use href="#icon-users"/></svg></span></div>
+        <div class="metric-value" id="total-count">8</div><div class="metric-foot">In today's review queue</div>
+      </article>
+      <article class="metric urgent-card">
+        <div class="metric-top">Urgent calls<span class="metric-icon"><svg fill="none" stroke="currentColor" stroke-width="2"><use href="#icon-phone-call"/></svg></span></div>
+        <div class="metric-value" id="urgent-count">0</div><div class="metric-foot">Positive intent · blocked</div>
+      </article>
+      <article class="metric clear-card">
+        <div class="metric-top">May call<span class="metric-icon"><svg fill="none" stroke="currentColor" stroke-width="2"><use href="#icon-phone"/></svg></span></div>
+        <div class="metric-value" id="maycall-count">0</div><div class="metric-foot">Negative intent · clear</div>
+      </article>
+      <article class="metric review-card">
+        <div class="metric-top">Needs review<span class="metric-icon"><svg fill="none" stroke="currentColor" stroke-width="2"><use href="#icon-alert"/></svg></span></div>
+        <div class="metric-value" id="review-count">0</div><div class="metric-foot">Verification error · hold</div>
+      </article>
+    </section>
+
+    <section class="table-card" aria-label="Customer calling queue">
+      <div class="table-header">
+        <h2 class="table-title">Customer queue <span class="table-count" id="result-count">8 records</span></h2>
+        <div class="table-tools">
+          <label class="search-wrap">
+            <svg fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><use href="#icon-search"/></svg>
+            <input class="search" id="search" type="search" placeholder="Search name, ID or phone" aria-label="Search customers">
+          </label>
+          <select class="filter" id="filter" aria-label="Filter call status">
+            <option value="all">All customers</option>
+            <option value="urgent">Urgent calls</option>
+            <option value="may-call">May call</option>
+            <option value="no-call">No call / skip</option>
+            <option value="review">Needs review</option>
+          </select>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr>
+            <th>Name</th><th>State</th><th>Country</th><th>ID type</th><th>ID number</th><th>Phone number</th><th>Intent score</th><th>Verification status</th><th>Action</th>
+          </tr></thead>
+          <tbody id="customer-rows"></tbody>
+        </table>
+        <div class="empty-state" id="empty-state">No customers match your search.</div>
+      </div>
+      <div class="table-footer"><span>Showing <strong id="showing-count">8</strong> customers</span><span>Queue updated just now <strong>·</strong></span></div>
+    </section>
+  </main>
+  </div>
+
+  <div class="overlay" id="call-overlay" role="dialog" aria-modal="true" aria-labelledby="call-name">
+    <div class="call-dialog">
+      <div class="call-avatar" id="call-avatar"></div>
+      <h2 id="call-name"></h2>
+      <p>Connecting customer call</p>
+      <p class="call-phone" id="call-phone"></p>
+      <div class="call-status"><span class="live-dot"></span><span id="call-status-text">Calling…</span></div>
+      <div class="call-actions"><button class="end-call" id="end-call">End call</button><button class="close-dialog" id="close-dialog">Close</button></div>
+    </div>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    const customers = [
+      { name: "Ananya Sharma", state: "Rajasthan", country: "India", idType: "Aadhaar", idNumber: "XXXX XXXX 4821", phone: "+91 98765 43210", score: 92, intent: "Positive", status: "Block" },
+      { name: "Ravi Patel", state: "Gujarat", country: "India", idType: "PAN", idNumber: "XXXXP 2841K", phone: "+91 98240 56123", score: 86, intent: "Positive", status: "Clear" },
+      { name: "Meera Devi", state: "Uttar Pradesh", country: "India", idType: "Aadhaar", idNumber: "XXXX XXXX 1756", phone: "+91 94567 81230", score: 34, intent: "Negative", status: "Clear" },
+      { name: "Sanjay Kumar", state: "Bihar", country: "India", idType: "Voter ID", idNumber: "XXXX 5920 1846", phone: "+91 93042 71568", score: 28, intent: "Negative", status: "Block" },
+      { name: "Priya Nair", state: "Kerala", country: "India", idType: "Aadhaar", idNumber: "XXXX XXXX 6309", phone: "+91 98470 21456", score: 78, intent: "Positive", status: "Error" },
+      { name: "Deepak Singh", state: "Madhya Pradesh", country: "India", idType: "PAN", idNumber: "XXXXS 7316Q", phone: "+91 97555 30821", score: 42, intent: "Negative", status: "Clear" },
+      { name: "Fatima Khan", state: "Maharashtra", country: "India", idType: "Aadhaar", idNumber: "XXXX XXXX 9042", phone: "+91 98901 47632", score: 89, intent: "Positive", status: "Block" },
+      { name: "Arjun Reddy", state: "Telangana", country: "India", idType: "Driving licence", idNumber: "XXXX-2019-8472", phone: "+91 97018 59234", score: 19, intent: "Negative", status: "Error" }
+    ];
+
+    const phoneIcon = '<svg fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><use href="#icon-phone"/></svg>';
+
+    function decision(customer) {
+      if (customer.status === "Error") return { key: "review", label: "Review required", action: "Review", disabled: true };
+      if (customer.intent === "Positive" && customer.status === "Block") return { key: "urgent", label: "Urgent call", action: "Call", disabled: false };
+      if (customer.intent === "Positive" && customer.status === "Clear") return { key: "no-call", label: "No call needed", action: "No call", disabled: true };
+      if (customer.intent === "Negative" && customer.status === "Clear") return { key: "may-call", label: "Optional follow-up", action: "Call", disabled: false };
+      return { key: "no-call", label: "Skip call", action: "Skip", disabled: true };
+    }
+
+    function initials(name) {
+      return name.split(" ").slice(0, 2).map(part => part[0]).join("").toUpperCase();
+    }
+
+    function render() {
+      const query = document.getElementById("search").value.trim().toLowerCase();
+      const filter = document.getElementById("filter").value;
+      const visible = customers.map((customer, index) => ({ customer, index, next: decision(customer) }))
+        .filter(({ customer, next }) => {
+          const matchesText = [customer.name, customer.state, customer.country, customer.idType, customer.idNumber, customer.phone].join(" ").toLowerCase().includes(query);
+          return matchesText && (filter === "all" || next.key === filter);
+        });
+
+      document.getElementById("customer-rows").innerHTML = visible.map(({ customer: c, index, next }) => {
+        const intentClass = c.intent === "Positive" ? "positive" : "negative";
+        const statusClass = c.status.toLowerCase();
+        const buttonClass = next.key === "may-call" ? "call-button muted" : "call-button";
+        return `<tr>
+          <td><div class="customer"><span class="customer-avatar">${initials(c.name)}</span>${c.name}</div></td>
+          <td>${c.state}</td><td>${c.country}</td><td>${c.idType}</td>
+          <td class="id-number">${c.idNumber}</td><td class="phone-number">${c.phone}</td>
+          <td><span class="intent ${intentClass}"><span class="intent-mark"><span>${c.intent === "Positive" ? "+" : "−"}</span></span>${c.intent}</span><span class="score">Score ${c.score}/100</span></td>
+          <td><span class="status ${statusClass}">${c.status}</span><span class="decision ${next.key === "urgent" ? "urgent" : ""}">${next.label}</span></td>
+          <td><button class="${buttonClass}" data-index="${index}" ${next.disabled ? "disabled" : ""} aria-label="${next.action === "Call" ? `Call ${c.name}` : next.action}">${next.disabled ? "" : phoneIcon}${next.action}</button></td>
+        </tr>`;
+      }).join("");
+
+      document.getElementById("empty-state").style.display = visible.length ? "none" : "block";
+      document.getElementById("result-count").textContent = `${visible.length} ${visible.length === 1 ? "record" : "records"}`;
+      document.getElementById("showing-count").textContent = visible.length;
+      document.getElementById("total-count").textContent = customers.length;
+      document.querySelector(".nav-badge").textContent = customers.length;
+      document.getElementById("urgent-count").textContent = customers.filter(c => decision(c).key === "urgent").length;
+      document.getElementById("maycall-count").textContent = customers.filter(c => decision(c).key === "may-call").length;
+      document.getElementById("review-count").textContent = customers.filter(c => decision(c).key === "review").length;
+    }
+
+    function notify(message) {
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.classList.add("show");
+      window.clearTimeout(notify.timer);
+      notify.timer = window.setTimeout(() => toast.classList.remove("show"), 2600);
+    }
+
+    function closeCall() {
+      document.getElementById("call-overlay").classList.remove("open");
+      document.getElementById("call-status-text").textContent = "Calling…";
+    }
+
+    document.getElementById("customer-rows").addEventListener("click", event => {
+      const button = event.target.closest("button[data-index]");
+      if (!button || button.disabled) return;
+      const customer = customers[Number(button.dataset.index)];
+      document.getElementById("call-avatar").textContent = initials(customer.name);
+      document.getElementById("call-name").textContent = customer.name;
+      document.getElementById("call-phone").textContent = customer.phone;
+      document.getElementById("call-overlay").classList.add("open");
+      document.getElementById("end-call").focus();
+    });
+
+    document.getElementById("end-call").addEventListener("click", () => {
+      const name = document.getElementById("call-name").textContent;
+      document.getElementById("call-status-text").textContent = "Call ended";
+      window.setTimeout(closeCall, 650);
+      notify(`Call with ${name} ended`);
+    });
+    document.getElementById("close-dialog").addEventListener("click", closeCall);
+    document.getElementById("call-overlay").addEventListener("click", event => {
+      if (event.target.id === "call-overlay") closeCall();
+    });
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape") closeCall();
+    });
+    document.getElementById("search").addEventListener("input", render);
+    document.getElementById("filter").addEventListener("change", render);
+    document.getElementById("nav-toggle").addEventListener("click", event => {
+      const hidden = document.body.classList.toggle("sidebar-hidden");
+      event.currentTarget.setAttribute("aria-expanded", String(!hidden));
+      event.currentTarget.setAttribute("aria-label", hidden ? "Show navigation" : "Hide navigation");
+      event.currentTarget.title = hidden ? "Show navigation" : "Hide navigation";
+    });
+    document.getElementById("account-trigger").addEventListener("click", event => {
+      event.stopPropagation();
+      const menu = document.getElementById("account-menu");
+      const open = menu.classList.toggle("open");
+      event.currentTarget.setAttribute("aria-expanded", String(open));
+    });
+    document.getElementById("account-menu").addEventListener("click", event => {
+      const action = event.target.closest("[data-account-action]");
+      if (!action) return;
+      document.getElementById("account-menu").classList.remove("open");
+      document.getElementById("account-trigger").setAttribute("aria-expanded", "false");
+      notify(`${action.dataset.accountAction} is available in the full workspace`);
+    });
+    document.addEventListener("click", event => {
+      if (!event.target.closest(".account-menu-wrap")) {
+        document.getElementById("account-menu").classList.remove("open");
+        document.getElementById("account-trigger").setAttribute("aria-expanded", "false");
+      }
+    });
+    document.querySelectorAll(".side-nav").forEach(nav => nav.addEventListener("click", event => {
+      const link = event.target.closest(".nav-link");
+      if (!link) return;
+      event.preventDefault();
+      document.querySelectorAll(".nav-link").forEach(item => {
+        item.classList.remove("active");
+        item.removeAttribute("aria-current");
+      });
+      link.classList.add("active");
+      link.setAttribute("aria-current", "page");
+      if (link.dataset.section !== "Calling queue") notify(`${link.dataset.section} section is available in the full workspace`);
+      else document.getElementById("search").focus();
+    }));
+    document.getElementById("notifications-button").addEventListener("click", () => notify("You're all caught up"));
+    document.getElementById("help-button").addEventListener("click", () => notify("Use the call decision guide to prioritize your queue"));
+    render();
+  </script>
+</body>
+</html>
